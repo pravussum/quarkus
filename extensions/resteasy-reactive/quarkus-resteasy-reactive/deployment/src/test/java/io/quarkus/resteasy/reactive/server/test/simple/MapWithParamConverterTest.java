@@ -18,6 +18,7 @@ import javax.ws.rs.ext.ParamConverterProvider;
 import javax.ws.rs.ext.Provider;
 
 import org.hamcrest.Matchers;
+import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
@@ -33,6 +34,8 @@ import io.quarkus.test.QuarkusUnitTest;
 import io.restassured.RestAssured;
 
 public class MapWithParamConverterTest {
+
+    private static Logger logger = Logger.getLogger(MapWithParamConverterTest.class);
 
     @RegisterExtension
     static QuarkusUnitTest test = new QuarkusUnitTest()
@@ -173,17 +176,27 @@ public class MapWithParamConverterTest {
 
         @Override
         public <T> ParamConverter<T> getConverter(Class<T> rawType, Type genericType, Annotation[] annotations) {
-            if (rawType == Map.class || rawType == Set.class || rawType == SortedSet.class ||
-                    (rawType == List.class && genericType != null
-                            && genericType.getTypeName().equals("java.util.List<" + Pojo.class.getName() + ">")))
+            if (rawType == Map.class || rawType == Set.class || rawType == SortedSet.class || isListOfPojo(genericType)
+                    || isListOfString(genericType)) {
                 return new JsonParamConverter<>(rawType, genericType);
+            }
             return null;
+        }
+
+        private <T> boolean isListOfPojo(Type genericType) {
+            return genericType != null && genericType.getTypeName()
+                    .equals("java.util.List<" + Pojo.class.getName() + ">");
+        }
+
+        private <T> boolean isListOfString(Type genericType) {
+            return genericType != null && genericType.getTypeName()
+                    .equals("java.util.List<java.lang.String>");
         }
 
     }
 
     static class Pojo {
-        Integer field;
+        public Integer field;
     }
 
     static class JsonParamConverter<T> implements ParamConverter<T> {
@@ -207,6 +220,7 @@ public class MapWithParamConverterTest {
                 return genericType != null ? objectMapper.readValue(value, genericType)
                         : objectMapper.readValue(value, rawType);
             } catch (JsonProcessingException e) {
+                logger.error("Errror converting " + value, e);
                 throw (new RuntimeException(e));
             }
         }
