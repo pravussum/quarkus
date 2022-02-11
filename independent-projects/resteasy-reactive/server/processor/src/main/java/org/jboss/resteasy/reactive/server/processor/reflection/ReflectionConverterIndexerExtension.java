@@ -17,7 +17,7 @@ import org.jboss.resteasy.reactive.server.processor.ServerEndpointIndexer;
 
 public class ReflectionConverterIndexerExtension implements ServerEndpointIndexer.ConverterSupplierIndexerExtension {
 
-    public ParameterConverterSupplier extractConverterImpl(String elementType, IndexView indexView,
+    public ParameterConverterSupplier extractConverterImpl(String elementType, String elementFullType, IndexView indexView,
             Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters) {
         MethodInfo fromString = null;
         MethodInfo valueOf = null;

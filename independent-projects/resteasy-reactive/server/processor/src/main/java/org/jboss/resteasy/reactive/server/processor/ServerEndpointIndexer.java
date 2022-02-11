@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.PatternSyntaxException;
 import javax.enterprise.inject.spi.DeploymentException;
@@ -308,10 +309,10 @@ public class ServerEndpointIndexer
     }
 
     protected void handleOtherParam(Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters,
-            ServerIndexedParameter builder, String elementType) {
+            ServerIndexedParameter builder, String elementType, String fullType) {
         try {
-            builder.setConverter(extractConverter(elementType, index,
-                    existingConverters, errorLocation, hasRuntimeConverters));
+            builder.setConverter(extractConverter(elementType, fullType,
+                    index, existingConverters, errorLocation, hasRuntimeConverters));
         } catch (Throwable throwable) {
             throw new RuntimeException("Could not create converter for " + elementType + " for " + builder.getErrorLocation()
                     + " of type " + builder.getType(), throwable);
@@ -319,31 +320,49 @@ public class ServerEndpointIndexer
     }
 
     protected void handleSortedSetParam(Map<String, String> existingConverters, String errorLocation,
-            boolean hasRuntimeConverters, ServerIndexedParameter builder, String elementType) {
-        ParameterConverterSupplier converter = extractConverter(elementType, index,
-                existingConverters, errorLocation, hasRuntimeConverters);
-        builder.setConverter(new SortedSetConverter.SortedSetSupplier(converter));
+            boolean hasRuntimeConverters, ServerIndexedParameter builder, String sortedSetType, String sortedSetFullType,
+            String elementType, String elementFullType) {
+        handleContainerParam(existingConverters, errorLocation, hasRuntimeConverters, builder,
+                sortedSetType, sortedSetFullType, elementType, elementFullType, SortedSetConverter.SortedSetSupplier::new);
     }
 
     protected void handleOptionalParam(Map<String, String> existingConverters, String errorLocation,
-            boolean hasRuntimeConverters, ServerIndexedParameter builder, String elementType) {
-        ParameterConverterSupplier converter = extractConverter(elementType, index,
-                existingConverters, errorLocation, hasRuntimeConverters);
-        builder.setConverter(new OptionalConverter.OptionalSupplier(converter));
+            boolean hasRuntimeConverters, ServerIndexedParameter builder, String optionalType, String optionalFullType,
+            String elementType, String elementFullType) {
+        handleContainerParam(existingConverters, errorLocation, hasRuntimeConverters, builder,
+                optionalType, optionalFullType, elementType, elementFullType, OptionalConverter.OptionalSupplier::new);
     }
 
     protected void handleSetParam(Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters,
-            ServerIndexedParameter builder, String elementType) {
-        ParameterConverterSupplier converter = extractConverter(elementType, index,
-                existingConverters, errorLocation, hasRuntimeConverters);
-        builder.setConverter(new SetConverter.SetSupplier(converter));
+            ServerIndexedParameter builder, String setType, String setFullType, String elementType, String elementFullType) {
+        handleContainerParam(existingConverters, errorLocation, hasRuntimeConverters, builder,
+                setType, setFullType, elementType, elementFullType, SetConverter.SetSupplier::new);
     }
 
     protected void handleListParam(Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters,
-            ServerIndexedParameter builder, String elementType) {
-        ParameterConverterSupplier converter = extractConverter(elementType, index,
-                existingConverters, errorLocation, hasRuntimeConverters);
-        builder.setConverter(new ListConverter.ListSupplier(converter));
+            ServerIndexedParameter builder, String listType, String listFullType, String elementType, String elementFullType) {
+        handleContainerParam(existingConverters, errorLocation, hasRuntimeConverters, builder,
+                listType, listFullType, elementType, elementFullType, ListConverter.ListSupplier::new);
+    }
+
+    private void handleContainerParam(Map<String, String> existingConverters, String errorLocation,
+            boolean hasRuntimeConverters,
+            ServerIndexedParameter builder, String containerType, String containerFullType, String elementType,
+            String elementFullType,
+            Function<ParameterConverterSupplier, ParameterConverterSupplier> containerParamConverterSupplier) {
+        // see if we can find a converter for the container type
+        ParameterConverterSupplier converter = extractConverter(containerType, containerFullType,
+                index, existingConverters, errorLocation, hasRuntimeConverters);
+        if (converter != null /* && existingConverters.get(containerType) != null */) {
+            builder.setSingle(true);
+            builder.setConverter(converter);
+        } else {
+            // try to find one for the element type otherwise
+            converter = extractConverter(elementType, elementFullType,
+                    index, existingConverters, errorLocation, hasRuntimeConverters);
+            builder.setSingle(false);
+            builder.setConverter(containerParamConverterSupplier.apply(converter));
+        }
     }
 
     protected void handlePathSegmentParam(ServerIndexedParameter builder) {
@@ -428,7 +447,7 @@ public class ServerEndpointIndexer
         return errorMessage;
     }
 
-    private ParameterConverterSupplier extractConverter(String elementType, IndexView indexView,
+    private ParameterConverterSupplier extractConverter(String elementType, String fullType, IndexView indexView,
             Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters) {
         if (elementType.equals(String.class.getName())) {
             if (hasRuntimeConverters)
@@ -450,8 +469,8 @@ public class ServerEndpointIndexer
         } else if (elementType.equals(PathSegment.class.getName())) {
             return new PathSegmentParamConverter.Supplier();
         }
-        return converterSupplierIndexerExtension.extractConverterImpl(elementType, indexView, existingConverters, errorLocation,
-                hasRuntimeConverters);
+        return converterSupplierIndexerExtension.extractConverterImpl(elementType, fullType, indexView, existingConverters,
+                errorLocation, hasRuntimeConverters);
     }
 
     @SuppressWarnings("unchecked")
@@ -509,7 +528,7 @@ public class ServerEndpointIndexer
     }
 
     public interface ConverterSupplierIndexerExtension {
-        ParameterConverterSupplier extractConverterImpl(String elementType, IndexView indexView,
+        ParameterConverterSupplier extractConverterImpl(String elementType, String elementFullType, IndexView indexView,
                 Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters);
     }
 

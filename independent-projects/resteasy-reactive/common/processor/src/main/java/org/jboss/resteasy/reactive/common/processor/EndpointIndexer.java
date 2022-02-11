@@ -1111,35 +1111,44 @@ public abstract class EndpointIndexer<T extends EndpointIndexer<T, PARAM, METHOD
             if (pt.name().equals(LIST)) {
                 typeHandled = true;
                 builder.setSingle(false);
+                String listType = toClassName(pt, currentClassInfo, actualEndpointInfo, index);
                 elementType = toClassName(pt.arguments().get(0), currentClassInfo, actualEndpointInfo, index);
                 if (convertible) {
-                    handleListParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType);
+                    handleListParam(existingConverters, errorLocation, hasRuntimeConverters, builder, listType,
+                            pt.toString(), elementType, pt.arguments().get(0).toString());
                 }
             } else if (pt.name().equals(SET)) {
                 typeHandled = true;
                 builder.setSingle(false);
+                String setType = toClassName(pt, currentClassInfo, actualEndpointInfo, index);
                 elementType = toClassName(pt.arguments().get(0), currentClassInfo, actualEndpointInfo, index);
                 if (convertible) {
-                    handleSetParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType);
+                    handleSetParam(existingConverters, errorLocation, hasRuntimeConverters, builder, setType,
+                            pt.toString(), elementType, pt.arguments().get(0).toString());
                 }
             } else if (pt.name().equals(SORTED_SET)) {
                 typeHandled = true;
                 builder.setSingle(false);
+                String sortedSetType = toClassName(pt, currentClassInfo, actualEndpointInfo, index);
                 elementType = toClassName(pt.arguments().get(0), currentClassInfo, actualEndpointInfo, index);
                 if (convertible) {
-                    handleSortedSetParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType);
+                    handleSortedSetParam(existingConverters, errorLocation, hasRuntimeConverters, builder, sortedSetType,
+                            pt.toString(), elementType, pt.arguments().get(0).toString());
                 }
             } else if (pt.name().equals(OPTIONAL)) {
                 typeHandled = true;
+                String optionalType = toClassName(pt, currentClassInfo, actualEndpointInfo, index);
                 elementType = toClassName(pt.arguments().get(0), currentClassInfo, actualEndpointInfo, index);
                 if (convertible) {
-                    handleOptionalParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType);
+                    handleOptionalParam(existingConverters, errorLocation, hasRuntimeConverters, builder, optionalType,
+                            pt.toString(), elementType, pt.arguments().get(0).toString());
                 }
                 builder.setOptional(true);
             } else if (convertible) {
+                builder.setSingle(true);
                 typeHandled = true;
                 elementType = toClassName(pt, currentClassInfo, actualEndpointInfo, index);
-                handleOtherParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType);
+                handleOtherParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType, pt.toString());
             } else {
                 // the "element" type is not of importance as in this case the signature is used at runtime to determine the proper types
                 elementType = DUMMY_ELEMENT_TYPE.toString();
@@ -1156,11 +1165,13 @@ public abstract class EndpointIndexer<T extends EndpointIndexer<T, PARAM, METHOD
             handleTemporalParam(builder, paramType.name(), anns, currentMethodInfo);
             typeHandled = true;
         } else if (paramType.name().equals(LIST) && (type == ParameterType.QUERY)) { // RESTEasy Classic handles the non-generic List type
+            String listType = List.class.getName();
             elementType = String.class.getName();
             typeHandled = true;
             builder.setSingle(false);
             if (convertible) {
-                handleListParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType);
+                handleListParam(existingConverters, errorLocation, hasRuntimeConverters, builder,
+                        listType, paramType.toString(), elementType, elementType);
             }
         }
 
@@ -1170,7 +1181,8 @@ public abstract class EndpointIndexer<T extends EndpointIndexer<T, PARAM, METHOD
 
             if (type != ParameterType.CONTEXT && type != ParameterType.BEAN && type != ParameterType.BODY
                     && type != ParameterType.ASYNC_RESPONSE && type != ParameterType.MULTI_PART_FORM) {
-                handleOtherParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType);
+                handleOtherParam(existingConverters, errorLocation, hasRuntimeConverters, builder, elementType,
+                        paramType.toString());
             }
             if (type == ParameterType.CONTEXT && elementType.equals(SseEventSink.class.getName())) {
                 builder.setSse(true);
@@ -1216,23 +1228,25 @@ public abstract class EndpointIndexer<T extends EndpointIndexer<T, PARAM, METHOD
     }
 
     protected void handleOtherParam(Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters,
-            PARAM builder, String elementType) {
+            PARAM builder, String elementType, String fullType) {
     }
 
     protected void handleSortedSetParam(Map<String, String> existingConverters, String errorLocation,
-            boolean hasRuntimeConverters, PARAM builder, String elementType) {
+            boolean hasRuntimeConverters, PARAM builder, String sortedSetType, String sortedSetFullType, String elementType,
+            String elementFullType) {
     }
 
     protected void handleOptionalParam(Map<String, String> existingConverters, String errorLocation,
-            boolean hasRuntimeConverters, PARAM builder, String elementType) {
+            boolean hasRuntimeConverters, PARAM builder, String optionalType, String optionalFullType, String elementType,
+            String elementFullType) {
     }
 
     protected void handleSetParam(Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters,
-            PARAM builder, String elementType) {
+            PARAM builder, String setType, String setFullType, String elementType, String elementFullType) {
     }
 
     protected void handleListParam(Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters,
-            PARAM builder, String elementType) {
+            PARAM builder, String listType, String listFullType, String elementType, String elementFullType) {
     }
 
     final boolean isContextType(ClassType klass) {

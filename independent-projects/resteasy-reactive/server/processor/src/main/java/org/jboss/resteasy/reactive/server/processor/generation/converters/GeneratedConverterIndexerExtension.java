@@ -30,7 +30,7 @@ public class GeneratedConverterIndexerExtension implements ServerEndpointIndexer
     }
 
     @Override
-    public ParameterConverterSupplier extractConverterImpl(String elementType, IndexView indexView,
+    public ParameterConverterSupplier extractConverterImpl(String elementType, String elementFullType, IndexView indexView,
             Map<String, String> existingConverters, String errorLocation, boolean hasRuntimeConverters) {
 
         MethodDescriptor fromString = null;
@@ -97,7 +97,7 @@ public class GeneratedConverterIndexerExtension implements ServerEndpointIndexer
             baseName = null;
             delegate = null;
         }
-        existingConverters.put(elementType, baseName);
+        existingConverters.put(elementFullType, baseName);
         if (hasRuntimeConverters)
             return new RuntimeResolvedConverter.Supplier().setDelegate(delegate);
         if (delegate == null)
